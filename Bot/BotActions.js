@@ -6,6 +6,9 @@
 
 import { Vec3 } from 'vec3';
 import { goals } from 'mineflayer-pathfinder';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 // Custom Error Classes
 class ActionError extends Error {
