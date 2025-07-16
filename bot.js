@@ -12,9 +12,10 @@ import mineflayer from 'mineflayer';
 import { pathfinder } from 'mineflayer-pathfinder';
 import { plugin as collectBlock } from 'mineflayer-collectblock';
 import { plugin as pvp } from 'mineflayer-pvp';
-import { plugin as armorManager } from 'mineflayer-armor-manager';
-import { plugin as autoEat } from 'mineflayer-auto-eat';
-import { Transitions, BotStateMachine, NestedStateMachine } from 'mineflayer-statemachine';
+import armorManager from 'mineflayer-armor-manager';
+import autoEat from 'mineflayer-auto-eat';
+import statemachine from 'mineflayer-statemachine';
+const { BotStateMachine, NestedStateMachine } = statemachine;
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
