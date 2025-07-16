@@ -1,0 +1,14 @@
+# Node dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Logs directory
+Logs/
+
+# Memory files generated during runtime
+Memory/**
+
+# General log files
+*.log
