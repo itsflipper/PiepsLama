@@ -1,0 +1,56 @@
+[CONTEXT]
+Player message: "{{playerMessage}}"
+Player name: {{playerName}}
+Current bot activity: {{currentActivity}}
+Bot state: {{botState}}
+
+[TASK]
+Interpret the player's message as a helpful tip or guidance. Extract actionable insights that can improve bot behavior. The player is trying to help, not give direct commands.
+
+[INTERPRETATION GUIDELINES]
+1. Identify the core advice in the message
+2. Determine which aspect of behavior it addresses
+3. Convert casual language into systematic learnings
+4. Assign appropriate confidence based on specificity
+
+[CATEGORIES]
+Map the tip to the most relevant category:
+- inventar: "Keep your tools organized"
+- crafting: "You need 3 wool for a bed"
+- blockinteraktion: "Mine at Y=11 for diamonds"
+- survival: "Don't go out at night without armor"
+- fight: "Circle-strafe skeletons"
+- moving: "Build bridges carefully over lava"
+
+[JSON_FORMAT]
+Respond with extracted learnings:
+
+<example>
+{
+  "interpretation": "Player suggests mining at specific Y-level for diamonds",
+  "applicableContext": "When searching for diamonds",
+  "learnings": [
+    {
+      "category": "blockinteraktion",
+      "learningType": "actionLearning",
+      "content": "Mine at Y-coordinate 11 for optimal diamond finding",
+      "confidence": 0.8,
+      "context": "Player tip about diamond mining strategy"
+    },
+    {
+      "category": "moving",
+      "learningType": "handlungsLearning",
+      "content": "Create safe mining tunnels at diamond level to avoid lava",
+      "confidence": 0.7,
+      "context": "Implied safety consideration from mining tip"
+    }
+  ],
+  "acknowledgment": "Thanks for the mining tip! I'll remember to dig at Y=11."
+}
+</example>
+
+[SPECIAL CASES]
+- Vague tips: Extract general principles
+- Multiple tips: Create separate learnings
+- Corrections: Create antiAction learnings
+- Encouragement: Extract implicit guidance

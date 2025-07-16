@@ -1,0 +1,66 @@
+[CONTEXT]
+Current goal: {{currentGoal}}
+Bot status: {{botStatus}}
+Available actions: {{availableActions}}
+Environment: {{environment}}
+
+[TASK]
+Create a specific sequence of actions to achieve the current goal. Each action must:
+1. Be executable with the current resources
+2. Have clear success criteria
+3. Include appropriate timeouts
+4. Consider potential failures
+
+[CONSTRAINTS]
+- Maximum 10 actions per queue
+- Each action must exist in availableActions.json
+- Parameters must match the expected types exactly
+- Consider bot's current capabilities (inventory, health, position)
+
+[JSON_FORMAT]
+Respond with ONLY the actionQueue array:
+
+<example>
+{
+  "actionQueue": [
+    {
+      "actionName": "equipItem",
+      "parameters": {
+        "itemName": "wooden_pickaxe",
+        "destination": "hand"
+      },
+      "successCriteria": "Wooden pickaxe equipped",
+      "timeoutMs": 2000,
+      "fallbackAction": "craft"
+    },
+    {
+      "actionName": "findBlock",
+      "parameters": {
+        "blockName": "stone",
+        "maxDistance": 16
+      },
+      "successCriteria": "Found stone block",
+      "timeoutMs": 5000,
+      "fallbackAction": "explore"
+    },
+    {
+      "actionName": "digBlock",
+      "parameters": {
+        "x": 10,
+        "y": 62,
+        "z": 20
+      },
+      "successCriteria": "Stone block mined",
+      "timeoutMs": 10000,
+      "fallbackAction": null
+    }
+  ]
+}
+</example>
+
+[VALIDATION]
+Before including an action, verify:
+- Do I have the required items/tools?
+- Is the action safe given my current health/hunger?
+- Will this action progress toward the goal?
+- Is the sequence logical and efficient?

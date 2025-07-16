@@ -1,0 +1,82 @@
+[DEATH CONTEXT]
+Death location: {{deathLocation}}
+Death reason: {{deathReason}}
+Items lost: {{lostInventory}}
+Distance from spawn: {{distanceToDeathPoint}}
+Time since death: {{timeSinceDeath}}
+Current resources: {{currentInventory}}
+
+[STRATEGIC TASK]
+Decide the best course of action after respawn:
+1. Attempt to recover items (if feasible and safe)
+2. Return to base (if established)
+3. Start fresh (if recovery too risky)
+
+[RISK ASSESSMENT]
+Consider these factors:
+- Item value vs. risk of retrieval
+- Time limit before items despawn (5 minutes)
+- Likelihood of death cause still being present
+- Current equipment for the journey
+
+[JSON_FORMAT]
+Respond with strategic recovery plan:
+
+<example>
+{
+  "analysis": "Died to creeper explosion 150 blocks away. Had diamond pickaxe and 32 iron. Death point is in open area during daytime. Recovery feasible.",
+  "priority": "high",
+  "strategy": "item_recovery",
+  "riskAssessment": {
+    "itemValue": "high",
+    "retrievalRisk": "medium",
+    "timeRemaining": "4 minutes",
+    "recommendation": "attempt_recovery"
+  },
+  "actionQueue": [
+    {
+      "actionName": "sprint",
+      "parameters": {
+        "enable": true
+      },
+      "successCriteria": "Sprinting enabled",
+      "timeoutMs": 1000,
+      "fallbackAction": null
+    },
+    {
+      "actionName": "goTo",
+      "parameters": {
+        "x": -245,
+        "y": 65,
+        "z": 789,
+        "minDistance": 5
+      },
+      "successCriteria": "Reached death location",
+      "timeoutMs": 120000,
+      "fallbackAction": "explore"
+    },
+    {
+      "actionName": "collectItem",
+      "parameters": {
+        "itemName": "diamond_pickaxe",
+        "maxDistance": 10
+      },
+      "successCriteria": "Recovered valuable items",
+      "timeoutMs": 30000,
+      "fallbackAction": null
+    }
+  ],
+  "learningInsights": [
+    {
+      "category": "survival",
+      "insight": "Always be aware of creeper hissing sounds",
+      "confidence": 1.0
+    }
+  ]
+}
+</example>
+
+[STRATEGIES]
+- item_recovery: Attempt to retrieve lost items
+- base_return: Go to established safe location
+- fresh_start: Begin gathering basic resources again

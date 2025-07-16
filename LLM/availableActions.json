@@ -1,0 +1,385 @@
+{
+  "movement": {
+    "goTo": {
+      "description": "Navigate to specific coordinates using pathfinder",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true },
+        "minDistance": { "type": "number", "required": false, "default": 0 }
+      },
+      "category": "moving"
+    },
+    "goToEntity": {
+      "description": "Navigate to a specific entity",
+      "parameters": {
+        "entityName": { "type": "string", "required": true },
+        "minDistance": { "type": "number", "required": false, "default": 2 }
+      },
+      "category": "moving"
+    },
+    "jump": {
+      "description": "Make the bot jump",
+      "parameters": {},
+      "category": "moving"
+    },
+    "sprint": {
+      "description": "Toggle sprinting",
+      "parameters": {
+        "enable": { "type": "boolean", "required": true }
+      },
+      "category": "moving"
+    },
+    "sneak": {
+      "description": "Toggle sneaking",
+      "parameters": {
+        "enable": { "type": "boolean", "required": true }
+      },
+      "category": "moving"
+    },
+    "stop": {
+      "description": "Stop all movement",
+      "parameters": {},
+      "category": "moving"
+    },
+    "lookAt": {
+      "description": "Look at specific coordinates",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true }
+      },
+      "category": "moving"
+    },
+    "lookAtEntity": {
+      "description": "Look at a specific entity",
+      "parameters": {
+        "entityName": { "type": "string", "required": true }
+      },
+      "category": "moving"
+    },
+    "lookAtBlock": {
+      "description": "Precisely look at the center of a block",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true }
+      },
+      "category": "moving"
+    }
+  },
+  "blocks": {
+    "digBlock": {
+      "description": "Mine/dig a block at coordinates",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true }
+      },
+      "category": "blockinteraktion"
+    },
+    "placeBlock": {
+      "description": "Place a block at coordinates",
+      "parameters": {
+        "blockName": { "type": "string", "required": true },
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true },
+        "faceVector": { "type": "object", "required": false }
+      },
+      "category": "blockinteraktion"
+    },
+    "activateBlock": {
+      "description": "Right-click/activate a block (doors, chests, etc)",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true }
+      },
+      "category": "blockinteraktion"
+    },
+    "collectBlock": {
+      "description": "Collect specific blocks using collectblock plugin",
+      "parameters": {
+        "blockName": { "type": "string", "required": true },
+        "count": { "type": "number", "required": false, "default": 1 }
+      },
+      "category": "blockinteraktion"
+    },
+    "findBlock": {
+      "description": "Find nearest block of type",
+      "parameters": {
+        "blockName": { "type": "string", "required": true },
+        "maxDistance": { "type": "number", "required": false, "default": 32 }
+      },
+      "category": "blockinteraktion"
+    }
+  },
+  "inventory": {
+    "equipItem": {
+      "description": "Equip item to hand/armor slot",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "destination": { "type": "string", "required": false, "enum": ["hand", "head", "torso", "legs", "feet", "off-hand"] }
+      },
+      "category": "inventar"
+    },
+    "unequip": {
+      "description": "Unequip item from slot",
+      "parameters": {
+        "destination": { "type": "string", "required": true, "enum": ["hand", "head", "torso", "legs", "feet", "off-hand"] }
+      },
+      "category": "inventar"
+    },
+    "tossItem": {
+      "description": "Toss/drop item from inventory",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "count": { "type": "number", "required": false, "default": 1 }
+      },
+      "category": "inventar"
+    },
+    "openContainer": {
+      "description": "Open a container (chest, furnace, etc)",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true }
+      },
+      "category": "inventar"
+    },
+    "closeContainer": {
+      "description": "Close current container window",
+      "parameters": {},
+      "category": "inventar"
+    },
+    "depositItem": {
+      "description": "Deposit item into container",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "count": { "type": "number", "required": false, "default": -1 }
+      },
+      "category": "inventar"
+    },
+    "withdrawItem": {
+      "description": "Withdraw item from container",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "count": { "type": "number", "required": false, "default": -1 }
+      },
+      "category": "inventar"
+    },
+    "consumeItem": {
+      "description": "Eat/drink consumable item",
+      "parameters": {
+        "itemName": { "type": "string", "required": true }
+      },
+      "category": "inventar"
+    },
+    "collectItem": {
+      "description": "Find and collect dropped item entities",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "maxDistance": { "type": "number", "required": false, "default": 16 }
+      },
+      "category": "inventar"
+    },
+    "windowClick": {
+      "description": "Click on a specific slot in open window",
+      "parameters": {
+        "slot": { "type": "number", "required": true },
+        "mouseButton": { "type": "number", "required": false, "default": 0 },
+        "mode": { "type": "number", "required": false, "default": 0 }
+      },
+      "category": "inventar"
+    }
+  },
+  "crafting": {
+    "craft": {
+      "description": "Craft an item using crafting table or inventory",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "count": { "type": "number", "required": false, "default": 1 },
+        "craftingTable": { "type": "boolean", "required": false, "default": false }
+      },
+      "category": "crafting"
+    },
+    "smelt": {
+      "description": "Smelt items in furnace",
+      "parameters": {
+        "itemName": { "type": "string", "required": true },
+        "fuelName": { "type": "string", "required": true },
+        "count": { "type": "number", "required": false, "default": 1 }
+      },
+      "category": "crafting"
+    },
+    "enchant": {
+      "description": "Select enchantment from enchanting table",
+      "parameters": {
+        "choice": { "type": "number", "required": true, "enum": [0, 1, 2] }
+      },
+      "category": "crafting"
+    },
+    "anvilCombine": {
+      "description": "Combine or repair items in anvil",
+      "parameters": {
+        "itemOneSlot": { "type": "number", "required": true },
+        "itemTwoSlot": { "type": "number", "required": true },
+        "newName": { "type": "string", "required": false }
+      },
+      "category": "crafting"
+    },
+    "brew": {
+      "description": "Brew potions in brewing stand",
+      "parameters": {
+        "ingredient": { "type": "string", "required": true },
+        "bottleSlots": { "type": "array", "required": true }
+      },
+      "category": "crafting"
+    }
+  },
+  "combat": {
+    "attack": {
+      "description": "Attack an entity",
+      "parameters": {
+        "entityName": { "type": "string", "required": true }
+      },
+      "category": "fight"
+    },
+    "shoot": {
+      "description": "Shoot with bow",
+      "parameters": {
+        "entityName": { "type": "string", "required": true },
+        "chargeTime": { "type": "number", "required": false, "default": 1000 }
+      },
+      "category": "fight"
+    },
+    "shield": {
+      "description": "Use shield to block",
+      "parameters": {
+        "enable": { "type": "boolean", "required": true }
+      },
+      "category": "fight"
+    },
+    "flee": {
+      "description": "Run away from threat",
+      "parameters": {
+        "entityName": { "type": "string", "required": true },
+        "distance": { "type": "number", "required": false, "default": 16 }
+      },
+      "category": "fight"
+    }
+  },
+  "interaction": {
+    "chat": {
+      "description": "Send chat message",
+      "parameters": {
+        "message": { "type": "string", "required": true }
+      },
+      "category": "moving"
+    },
+    "whisper": {
+      "description": "Send private message",
+      "parameters": {
+        "username": { "type": "string", "required": true },
+        "message": { "type": "string", "required": true }
+      },
+      "category": "moving"
+    },
+    "sleep": {
+      "description": "Sleep in bed",
+      "parameters": {
+        "x": { "type": "number", "required": true },
+        "y": { "type": "number", "required": true },
+        "z": { "type": "number", "required": true }
+      },
+      "category": "survival"
+    },
+    "wake": {
+      "description": "Wake up from bed",
+      "parameters": {},
+      "category": "survival"
+    },
+    "mount": {
+      "description": "Mount an entity (horse, boat, etc)",
+      "parameters": {
+        "entityName": { "type": "string", "required": true }
+      },
+      "category": "moving"
+    },
+    "dismount": {
+      "description": "Dismount from entity",
+      "parameters": {},
+      "category": "moving"
+    },
+    "fish": {
+      "description": "Start fishing",
+      "parameters": {},
+      "category": "survival"
+    },
+    "stopFishing": {
+      "description": "Stop fishing",
+      "parameters": {},
+      "category": "survival"
+    },
+    "trade": {
+      "description": "Execute trade with villager",
+      "parameters": {
+        "tradeIndex": { "type": "number", "required": true }
+      },
+      "category": "survival"
+    }
+  },
+  "information": {
+    "getStatus": {
+      "description": "Get current bot status",
+      "parameters": {},
+      "category": "survival"
+    },
+    "findEntity": {
+      "description": "Find nearest entity by type",
+      "parameters": {
+        "entityType": { "type": "string", "required": true },
+        "maxDistance": { "type": "number", "required": false, "default": 32 }
+      },
+      "category": "survival"
+    },
+    "getInventory": {
+      "description": "List all items in inventory",
+      "parameters": {},
+      "category": "inventar"
+    },
+    "getTime": {
+      "description": "Get current game time",
+      "parameters": {},
+      "category": "survival"
+    },
+    "getWeather": {
+      "description": "Get current weather",
+      "parameters": {},
+      "category": "survival"
+    },
+    "getOpenWindowInfo": {
+      "description": "Get info about open container/window",
+      "parameters": {},
+      "category": "inventar"
+    },
+    "getTradeOptions": {
+      "description": "List available villager trades",
+      "parameters": {},
+      "category": "survival"
+    },
+    "respawn": {
+      "description": "Force respawn after death",
+      "parameters": {},
+      "category": "survival"
+    },
+    "quit": {
+      "description": "Disconnect from server",
+      "parameters": {
+        "reason": { "type": "string", "required": false, "default": "Disconnecting" }
+      },
+      "category": "survival"
+    }
+  }
+}

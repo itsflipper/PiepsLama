@@ -1,0 +1,53 @@
+[CRITICAL CONTEXT]
+EMERGENCY DETECTED!
+Trigger: {{emergencyTrigger}}
+Current health: {{health}}/20
+Current food: {{food}}/20
+Immediate threats: {{threats}}
+Available resources: {{quickInventory}}
+
+[IMMEDIATE TASK]
+Create a survival action plan within 2 seconds. Priority is staying alive.
+
+[DECISION TREE]
+1. If health < 6: Immediate healing or escape
+2. If hunger < 10: Eat any available food
+3. If under attack: Fight or flee based on equipment
+4. If in danger zone: Move to safety immediately
+
+[JSON_FORMAT]
+Respond with minimal but effective action queue:
+
+<example>
+{
+  "analysis": "Critical health (4/20), zombie attacking, have golden apple",
+  "priority": "critical",
+  "actionQueue": [
+    {
+      "actionName": "consumeItem",
+      "parameters": {
+        "itemName": "golden_apple"
+      },
+      "successCriteria": "Health restored",
+      "timeoutMs": 1000,
+      "fallbackAction": "flee"
+    },
+    {
+      "actionName": "flee",
+      "parameters": {
+        "entityName": "zombie",
+        "distance": 20
+      },
+      "successCriteria": "Distance from threat increased",
+      "timeoutMs": 10000,
+      "fallbackAction": null
+    }
+  ]
+}
+</example>
+
+[PRIORITIES]
+1. Survive the next 30 seconds
+2. Reach stable state (health > 10, no immediate threats)
+3. Find safe location
+4. Reassess situation

@@ -1,0 +1,86 @@
+[CONTEXT]
+Current bot status:
+{{botStatus}}
+
+Available actions:
+{{availableActions}}
+
+Recent learnings:
+{{recentLearnings}}
+
+Current time: {{gameTime}}
+Weather: {{weather}}
+Dimension: {{dimension}}
+
+[TASK]
+Analyze the current situation and determine the appropriate course of action. Consider:
+1. Are there any immediate threats or needs?
+2. What resources are available?
+3. What progress has been made toward current goals?
+4. What should be the next logical step?
+
+[MEMORY]
+Previous goals (if any): {{previousGoals}}
+Failed attempts: {{failedAttempts}}
+Successful patterns: {{successPatterns}}
+
+[JSON_FORMAT]
+Respond with the following JSON structure:
+
+<example>
+{
+  "analysis": "I have 15 health and 8 food. Night is approaching and I don't have shelter. I need to quickly gather wood and build a basic shelter before hostile mobs spawn.",
+  "priority": "high",
+  "goalQueue": [
+    {
+      "goalId": "survival_shelter",
+      "goalDescription": "Build basic shelter before nightfall",
+      "priority": 9,
+      "category": "survival"
+    },
+    {
+      "goalId": "gather_food",
+      "goalDescription": "Find food sources to maintain hunger above 10",
+      "priority": 7,
+      "category": "survival"
+    }
+  ],
+  "actionQueue": [
+    {
+      "actionName": "findBlock",
+      "parameters": {
+        "blockName": "oak_log",
+        "maxDistance": 32
+      },
+      "successCriteria": "Found oak_log within range",
+      "timeoutMs": 5000,
+      "fallbackAction": "explore"
+    },
+    {
+      "actionName": "goTo",
+      "parameters": {
+        "x": 100,
+        "y": 64,
+        "z": 200,
+        "minDistance": 2
+      },
+      "successCriteria": "Reached tree location",
+      "timeoutMs": 30000,
+      "fallbackAction": null
+    }
+  ],
+  "learningInsights": [
+    {
+      "category": "survival",
+      "insight": "Prioritize shelter construction when night approaches",
+      "confidence": 0.9
+    }
+  ]
+}
+</example>
+
+[IMPORTANT]
+- Each action in actionQueue must have valid parameters according to availableActions
+- Priorities range from 1 (lowest) to 10 (highest)
+- Include fallback actions when uncertainty exists
+- Keep action sequences short and focused (max 10 actions per queue)

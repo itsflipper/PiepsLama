@@ -1,0 +1,49 @@
+{
+  "name": "piepslama",
+  "version": "1.0.0",
+  "description": "Autonomous Minecraft bot with LLM-driven decision making, event-based reactions, and learning capabilities",
+  "main": "bot.js",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --trace-warnings bot.js",
+    "clean-logs": "rm -rf Logs/*.log Logs/*.json || true",
+    "reset-memory": "find Memory -name '*.json' -exec sh -c 'echo \"[]\" > {}' \\;",
+    "full-reset": "npm run clean-logs && npm run reset-memory"
+  },
+  "keywords": [
+    "minecraft",
+    "bot",
+    "mineflayer",
+    "ai",
+    "llm",
+    "autonomous"
+  ],
+  "author": "Pieps",
+  "license": "MIT",
+  "dependencies": {
+    "mineflayer": "^4.30.0",
+    "mineflayer-pathfinder": "^2.4.5",
+    "mineflayer-collectblock": "^1.6.0",
+    "mineflayer-statemachine": "^1.11.0",
+    "mineflayer-armor-manager": "^2.0.1",
+    "mineflayer-auto-eat": "^2.3.3",
+    "mineflayer-pvp": "^1.3.2",
+    "minecraft-data": "^3.93.0",
+    "vec3": "^0.1.10",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "winston": "^3.13.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "joi": "^17.13.1",
+    "uuid": "^10.0.0",
+    "lodash": "^4.17.21",
+    "p-queue": "^7.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

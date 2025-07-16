@@ -1,0 +1,59 @@
+[CONTEXT]
+Completed action sequence: {{completedActions}}
+Result: {{result}} (success/failure)
+Initial goal: {{initialGoal}}
+Final state: {{finalState}}
+Execution time: {{executionTime}}
+
+[TASK]
+Extract valuable learnings from this experience. Consider:
+1. What worked well?
+2. What failed and why?
+3. What patterns emerged?
+4. How can this be done better next time?
+
+[CATEGORIES]
+Classify learnings into these categories:
+- inventar: Item management, storage, equipment
+- crafting: Recipe knowledge, resource requirements
+- blockinteraktion: Mining, building, world modification
+- survival: Health, food, safety management
+- fight: Combat tactics, mob behavior
+- moving: Navigation, pathfinding, exploration
+
+[JSON_FORMAT]
+Respond with learnings in this format:
+
+<example>
+{
+  "learnings": [
+    {
+      "category": "survival",
+      "learningType": "actionLearning",
+      "content": "Always eat food when hunger drops below 10 to maintain sprint ability",
+      "confidence": 0.95,
+      "context": "Lost sprint ability during combat due to low hunger"
+    },
+    {
+      "category": "fight",
+      "learningType": "antiAction",
+      "content": "Never engage multiple zombies without armor",
+      "confidence": 0.9,
+      "context": "Died when fighting 3 zombies with no armor"
+    },
+    {
+      "category": "crafting",
+      "learningType": "handlungsLearning",
+      "content": "Craft stone tools immediately after getting wood tools for efficiency",
+      "confidence": 0.85,
+      "context": "Wood tools broke quickly when mining stone"
+    }
+  ],
+  "summary": "Key insight: Preparation and resource management are critical for survival"
+}
+</example>
+
+[LEARNING TYPES]
+- actionLearning: Successful patterns to repeat
+- handlungsLearning: Strategic insights for planning
+- antiAction: Patterns to avoid in the future
