@@ -16,7 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load available actions on startup
-const availableActionsPath = join(__dirname, '../availableActions.json');
+const availableActionsPath = join(__dirname, 'availableActions.json');
 const availableActions = JSON.parse(readFileSync(availableActionsPath, 'utf8'));
 
 // Flatten all actions into a single lookup map

@@ -21,29 +21,29 @@ import { dirname, join } from 'path';
 
 // Module imports (will be created in later phases)
 // Phase 2 imports - commented for now
-// import BotStateManager from './Queues/BotStateManager.js';
-// import Events from './Bot/Events.js';
+import BotStateManager from './Queues/BotStateManager.js';
+import Events from './Bot/Events.js';
 
 // Phase 3 imports - commented for now
-// import OllamaInterface from './LLM/OllamaInterface.js';
-// import AiResponseParser from './LLM/AiResponseParser.js';
+import OllamaInterface from './LLM/OllamaInterface.js';
+import AiResponseParser from './LLM/AiResponseParser.js';
 
 // Phase 4 imports - commented for now
-// import StandardQueue from './Queues/StandardQueue.js';
-// import EmergencyQueue from './Queues/EmergencyQueue.js';
-// import RespawnQueue from './Queues/RespawnQueue.js';
-// import QueueManager from './Queues/QueueManager.js';
+import StandardQueue from './Queues/StandardQueue.js';
+import EmergencyQueue from './Queues/EmergencyQueue.js';
+import RespawnQueue from './Queues/RespawnQueue.js';
+import QueueManager from './Queues/QueueManager.js';
 
 // Phase 5 imports - commented for now
-// import EventDispatcher from './Bot/EventDispatcher.js';
+import EventDispatcher from './Bot/EventDispatcher.js';
 
 // Phase 6 imports - commented for now
-// import LearningManager from './Memory/LearningManager.js';
-// import SkillLibrary from './Bot/SkillLibrary.js';
+import LearningManager from './Memory/LearningManager.js';
+import SkillLibrary from './Bot/SkillLibrary.js';
 
 // Phase 7 imports - commented for now
-// import ErrorRecovery from './Utils/ErrorRecovery.js';
-// import PerformanceMonitor from './Utils/PerformanceMonitor.js';
+import ErrorRecovery from './Utils/ErrorRecovery.js';
+import PerformanceMonitor from './Utils/PerformanceMonitor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -143,49 +143,49 @@ async function initializeBot() {
       try {
         // Säule 4 & 5: Module instantiation with dependency injection
         // Phase 2 modules
-        // modules.botStateManager = new BotStateManager();
-        // modules.events = new Events(bot, modules.botStateManager);
+        modules.botStateManager = new BotStateManager();
+        modules.events = new Events(bot, modules.botStateManager);
         
         // Phase 3 modules
-        // modules.ollamaInterface = new OllamaInterface(
-        //   process.env.OLLAMA_HOST,
-        //   process.env.OLLAMA_MODEL,
-        //   parseInt(process.env.OLLAMA_TIMEOUT)
-        // );
-        // modules.aiResponseParser = new AiResponseParser(modules.actionValidator);
+        modules.ollamaInterface = new OllamaInterface(
+          process.env.OLLAMA_HOST,
+          process.env.OLLAMA_MODEL,
+          parseInt(process.env.OLLAMA_TIMEOUT)
+        );
+        modules.aiResponseParser = new AiResponseParser(modules.actionValidator);
         
         // Phase 4 modules
-        // modules.standardQueue = new StandardQueue(bot, modules.botStateManager, modules.ollamaInterface);
-        // modules.emergencyQueue = new EmergencyQueue(bot, modules.botStateManager, modules.ollamaInterface);
-        // modules.respawnQueue = new RespawnQueue(bot, modules.botStateManager, modules.ollamaInterface);
-        // modules.queueManager = new QueueManager(
-        //   bot,
-        //   modules.botStateManager,
-        //   modules.standardQueue,
-        //   modules.emergencyQueue,
-        //   modules.respawnQueue
-        // );
+        modules.standardQueue = new StandardQueue(bot, modules.botStateManager, modules.ollamaInterface);
+        modules.emergencyQueue = new EmergencyQueue(bot, modules.botStateManager, modules.ollamaInterface);
+        modules.respawnQueue = new RespawnQueue(bot, modules.botStateManager, modules.ollamaInterface);
+        modules.queueManager = new QueueManager(
+          bot,
+          modules.botStateManager,
+          modules.standardQueue,
+          modules.emergencyQueue,
+          modules.respawnQueue
+        );
         
         // Phase 5 modules
-        // modules.eventDispatcher = new EventDispatcher(
-        //   bot,
-        //   modules.queueManager,
-        //   modules.botStateManager,
-        //   modules.events
-        // );
+        modules.eventDispatcher = new EventDispatcher(
+          bot,
+          modules.queueManager,
+          modules.botStateManager,
+          modules.events
+        );
         
         // Phase 6 modules
-        // modules.learningManager = new LearningManager();
-        // modules.skillLibrary = new SkillLibrary(bot, modules.learningManager);
+        modules.learningManager = new LearningManager();
+        modules.skillLibrary = new SkillLibrary(bot, modules.learningManager);
         
         // Phase 7 modules
-        // modules.errorRecovery = new ErrorRecovery(bot, modules.learningManager, logger);
-        // modules.performanceMonitor = new PerformanceMonitor(modules, logger);
+        modules.errorRecovery = new ErrorRecovery(bot, modules.learningManager, logger);
+        modules.performanceMonitor = new PerformanceMonitor(modules, logger);
         
         logger.info('All modules initialized');
         
         // Säule 6: Hand off control to EventDispatcher
-        // modules.eventDispatcher.startListening();
+        modules.eventDispatcher.startListening();
         logger.info('System ready - EventDispatcher active');
         
         // Send ready message
@@ -213,7 +213,7 @@ async function initializeBot() {
     bot.on('end', (reason) => {
       logger.info('Bot disconnected:', reason);
       if (modules.eventDispatcher) {
-        // modules.eventDispatcher.stopListening();
+        modules.eventDispatcher.stopListening();
       }
       handleReconnect();
     });
@@ -273,22 +273,22 @@ async function gracefulShutdown(reason = 'Unknown') {
     
     // Save current state
     if (modules.queueManager) {
-      // await modules.queueManager.saveState();
+      await modules.queueManager.saveState();
       logger.info('Queue state saved');
     }
     
     if (modules.learningManager) {
-      // await modules.learningManager.saveAll();
+      await modules.learningManager.saveAll();
       logger.info('Learnings saved');
     }
     
     // Stop all modules
     if (modules.eventDispatcher) {
-      // modules.eventDispatcher.stopListening();
+      modules.eventDispatcher.stopListening();
     }
     
     if (modules.performanceMonitor) {
-      // modules.performanceMonitor.stop();
+      modules.performanceMonitor.stop();
     }
     
     // Disconnect bot
