@@ -14,42 +14,50 @@ import { plugin as collectBlock } from 'mineflayer-collectblock';
 import { plugin as pvp } from 'mineflayer-pvp';
 import armorManager from 'mineflayer-armor-manager';
 import autoEat from 'mineflayer-auto-eat';
-import statemachine from 'mineflayer-statemachine';
-const { BotStateMachine, NestedStateMachine } = statemachine;
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { mkdirSync } from 'fs';
 
-// Module imports (will be created in later phases)
-// Phase 2 imports - commented for now
+// Module imports
 import BotStateManager from './Queues/BotStateManager.js';
 import Events from './Bot/Events.js';
-
-// Phase 3 imports - commented for now
 import OllamaInterface from './LLM/OllamaInterface.js';
 import AiResponseParser from './LLM/AiResponseParser.js';
-
-// Phase 4 imports - commented for now
+import ActionValidator from './LLM/ActionValidator.js';
 import StandardQueue from './Queues/StandardQueue.js';
 import EmergencyQueue from './Queues/EmergencyQueue.js';
 import RespawnQueue from './Queues/RespawnQueue.js';
 import QueueManager from './Queues/QueueManager.js';
-
-// Phase 5 imports - commented for now
 import EventDispatcher from './Bot/EventDispatcher.js';
-
-// Phase 6 imports - commented for now
 import LearningManager from './Memory/LearningManager.js';
 import SkillLibrary from './Bot/SkillLibrary.js';
-
-// Phase 7 imports - commented for now
 import ErrorRecovery from './Utils/ErrorRecovery.js';
 import PerformanceMonitor from './Utils/PerformanceMonitor.js';
+import BotActions from './Bot/BotActions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config();
+
+// Ensure required directories exist
+function ensureDirectoriesExist() {
+  const directories = [
+    join(__dirname, 'Logs'),
+    join(__dirname, 'Memory', 'StandardQueue'),
+    join(__dirname, 'Memory', 'EmergencyQueue'),
+    join(__dirname, 'Memory', 'RespawnQueue'),
+    join(__dirname, 'Memory', 'SkillMemory')
+  ];
+  
+  directories.forEach(dir => {
+    mkdirSync(dir, { recursive: true });
+  });
+}
+
+// Create directories before anything else
+ensureDirectoriesExist();
 
 // Setup logging
 const logger = winston.createLogger({
@@ -98,7 +106,7 @@ process.on('unhandledRejection', (reason, promise) => {
   gracefulShutdown('Unhandled rejection');
 });
 
-// Säule 2: Create bot instance
+// Bot configuration
 logger.info('Creating bot instance...');
 
 const botOptions = {
@@ -128,7 +136,7 @@ async function initializeBot() {
     bot = mineflayer.createBot(botOptions);
     logger.info(`Bot created for ${botOptions.host}:${botOptions.port}`);
 
-    // Säule 3: Load plugins in correct order
+    // Load plugins in correct order
     bot.loadPlugin(pathfinder);
     bot.loadPlugin(collectBlock);
     bot.loadPlugin(pvp);
@@ -141,52 +149,98 @@ async function initializeBot() {
       logger.info('Bot spawned in world');
       
       try {
-        // Säule 4 & 5: Module instantiation with dependency injection
-        // Phase 2 modules
+        // Module instantiation with correct dependency injection
+        
+        // Phase 1: Core modules without dependencies
         modules.botStateManager = new BotStateManager();
+        modules.learningManager = new LearningManager(logger);
+        modules.botActions = new BotActions(bot);
+        
+        // Phase 2: Modules with simple dependencies
+        modules.actionValidator = new ActionValidator(bot, modules.botStateManager);
         modules.events = new Events(bot, modules.botStateManager);
+        modules.errorRecovery = new ErrorRecovery(logger, modules.learningManager);
         
-        // Phase 3 modules
+        // Phase 3: LLM modules
         modules.ollamaInterface = new OllamaInterface(
-          process.env.OLLAMA_HOST,
-          process.env.OLLAMA_MODEL,
-          parseInt(process.env.OLLAMA_TIMEOUT)
+          process.env.OLLAMA_HOST || 'http://localhost:11434',
+          process.env.OLLAMA_MODEL || 'llama2',
+          parseInt(process.env.OLLAMA_TIMEOUT) || 30000
         );
-        modules.aiResponseParser = new AiResponseParser(modules.actionValidator);
+        modules.aiResponseParser = new AiResponseParser(modules.actionValidator, logger);
         
-        // Phase 4 modules
-        modules.standardQueue = new StandardQueue(bot, modules.botStateManager, modules.ollamaInterface);
-        modules.emergencyQueue = new EmergencyQueue(bot, modules.botStateManager, modules.ollamaInterface);
-        modules.respawnQueue = new RespawnQueue(bot, modules.botStateManager, modules.ollamaInterface);
+        // Phase 4: Queue modules (they need many dependencies)
+        modules.standardQueue = new StandardQueue(
+          bot,
+          modules.botStateManager,
+          modules.ollamaInterface,
+          modules.aiResponseParser,
+          modules.learningManager,
+          logger
+        );
+        
+        modules.emergencyQueue = new EmergencyQueue(
+          bot,
+          modules.botStateManager,
+          modules.ollamaInterface,
+          modules.aiResponseParser,
+          modules.learningManager,
+          logger,
+          { type: 'emergency' } // context parameter
+        );
+        
+        modules.respawnQueue = new RespawnQueue(
+          bot,
+          modules.botStateManager,
+          modules.ollamaInterface,
+          modules.aiResponseParser,
+          modules.learningManager,
+          logger,
+          { type: 'respawn' } // context parameter
+        );
+        
+        // Phase 5: Queue Manager (needs all queues)
         modules.queueManager = new QueueManager(
           bot,
           modules.botStateManager,
+          modules.ollamaInterface,
+          modules.aiResponseParser,
+          modules.learningManager,
+          logger
+        );
+        
+        // Set the queues in QueueManager after instantiation
+        modules.queueManager.setQueues(
           modules.standardQueue,
           modules.emergencyQueue,
           modules.respawnQueue
         );
         
-        // Phase 5 modules
+        // Phase 6: Event Dispatcher
         modules.eventDispatcher = new EventDispatcher(
-          bot,
           modules.queueManager,
-          modules.botStateManager,
-          modules.events
+          logger
         );
         
-        // Phase 6 modules
-        modules.learningManager = new LearningManager();
-        modules.skillLibrary = new SkillLibrary(bot, modules.learningManager);
+        // Phase 7: Advanced modules
+        modules.skillLibrary = new SkillLibrary(
+          modules.botActions,
+          modules.learningManager,
+          logger
+        );
         
-        // Phase 7 modules
-        modules.errorRecovery = new ErrorRecovery(bot, modules.learningManager, logger);
+        // Phase 8: Performance Monitor (needs all modules)
         modules.performanceMonitor = new PerformanceMonitor(modules, logger);
         
-        logger.info('All modules initialized');
+        logger.info('All modules initialized successfully');
         
-        // Säule 6: Hand off control to EventDispatcher
+        // Start the event dispatcher
         modules.eventDispatcher.startListening();
         logger.info('System ready - EventDispatcher active');
+        
+        // Start performance monitoring
+        modules.performanceMonitor.start();
+        logger.info('Performance monitoring started');
         
         // Send ready message
         bot.chat('PiepsLama online and ready!');
@@ -253,18 +307,27 @@ function handleReconnect() {
     bot = null;
   }
   
+  // Clear modules
+  modules = {};
+  
   setTimeout(() => {
     initializeBot();
   }, delay);
 }
 
 /**
- * Säule 7: Graceful shutdown handler
+ * Graceful shutdown handler
  */
 async function gracefulShutdown(reason = 'Unknown') {
   logger.info(`Initiating graceful shutdown: ${reason}`);
   
   try {
+    // Stop performance monitoring first
+    if (modules.performanceMonitor) {
+      modules.performanceMonitor.stop();
+      logger.info('Performance monitoring stopped');
+    }
+    
     // Notify in-game if connected
     if (bot && bot.entity) {
       bot.chat('Disconnecting...');
@@ -272,7 +335,7 @@ async function gracefulShutdown(reason = 'Unknown') {
     }
     
     // Save current state
-    if (modules.queueManager) {
+    if (modules.queueManager && modules.queueManager.saveState) {
       await modules.queueManager.saveState();
       logger.info('Queue state saved');
     }
@@ -285,10 +348,6 @@ async function gracefulShutdown(reason = 'Unknown') {
     // Stop all modules
     if (modules.eventDispatcher) {
       modules.eventDispatcher.stopListening();
-    }
-    
-    if (modules.performanceMonitor) {
-      modules.performanceMonitor.stop();
     }
     
     // Disconnect bot
