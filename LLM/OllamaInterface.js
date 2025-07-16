@@ -9,6 +9,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import winston from 'winston';
+import ErrorRecovery from '../Utils/ErrorRecovery.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -73,6 +74,9 @@ class OllamaInterface {
         })
       ]
     });
+
+    // Initialize error recovery helper
+    this.errorRecovery = new ErrorRecovery(null, null, this.logger);
     
     // Initialize axios instance
     this.axios = axios.create({
@@ -105,8 +109,8 @@ class OllamaInterface {
       
       return template;
     } catch (error) {
-      
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       
       throw new PromptTemplateError(
         `Failed to load prompt template: ${promptName}`,
@@ -173,7 +177,7 @@ class OllamaInterface {
         }
         
       } catch (error) {
-        await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+        await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
 
         lastError = error;
         
@@ -208,7 +212,7 @@ class OllamaInterface {
       this.metrics.totalResponseTime += (Date.now() - startTime);
       return response;
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.metrics.errors++;
       throw error;
     }
@@ -227,7 +231,7 @@ class OllamaInterface {
       this.logger.debug('Successfully parsed JSON response');
       return parsed;
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Failed to parse JSON response: ${error.message}`);
       this.logger.debug(`Raw response: ${responseText.substring(0, 200)}...`);
       throw new LLMResponseError(
@@ -267,7 +271,7 @@ class OllamaInterface {
       return parsedResponse;
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       // Re-throw with context
       if (error instanceof OllamaConnectionError || 
           error instanceof LLMResponseError || 
@@ -363,7 +367,7 @@ class OllamaInterface {
         availableModels: models.map(m => m.name)
       };
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       return {
         connected: false,
         error: error.message

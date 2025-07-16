@@ -6,6 +6,7 @@
 
 import { createMachine, interpret } from 'mineflayer-statemachine';
 import winston from 'winston';
+import ErrorRecovery from '../Utils/ErrorRecovery.js';
 import { Vec3 } from 'vec3';
 
 class RespawnQueue {
@@ -52,6 +53,9 @@ class RespawnQueue {
         })
       ]
     });
+
+    // Initialize error recovery helper
+    this.errorRecovery = new ErrorRecovery(this.bot, this.learningManager, this.logger);
   }
   
   /**
@@ -116,7 +120,7 @@ class RespawnQueue {
         );
       }
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.warn(`Failed to load known locations: ${error.message}`);
     }
   }
@@ -172,7 +176,7 @@ class RespawnQueue {
       this.setMissionFromStrategy(parsedResponse);
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Failed to get respawn strategy: ${error.message}`);
       
       // Default to fresh start on error
@@ -382,7 +386,7 @@ class RespawnQueue {
       this.stateMachineService.send('SUCCESS');
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Action failed: ${error.message}`);
       this.botStateManager.setExecutingAction(false);
       this.botStateManager.incrementActionCount(false);

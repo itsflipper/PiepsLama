@@ -6,6 +6,7 @@
 
 import { createMachine, interpret } from 'mineflayer-statemachine';
 import winston from 'winston';
+import ErrorRecovery from '../Utils/ErrorRecovery.js';
 
 class EmergencyQueue {
   constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, emergencyContext) {
@@ -44,6 +45,9 @@ class EmergencyQueue {
         })
       ]
     });
+
+    // Initialize error recovery helper
+    this.errorRecovery = new ErrorRecovery(this.bot, this.learningManager, this.logger);
   }
   
   /**
@@ -252,7 +256,7 @@ class EmergencyQueue {
       this.currentActionQueue.push(...parsedResponse.validatedActions);
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Failed to get emergency plan: ${error.message}`);
       // Continue with reflex actions only
     }
@@ -444,7 +448,7 @@ class EmergencyQueue {
       this.stateMachineService.send('SUCCESS');
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Emergency action failed: ${error.message}`);
       this.botStateManager.setExecutingAction(false);
       
