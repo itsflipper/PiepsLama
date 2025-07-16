@@ -23,8 +23,10 @@ class QueueManager {
     this.activeQueue = null;
     this.pausedQueue = null;
     
-    // Persistent standard queue
+    // Persistent standard queue and currently active temporary queues
     this.standardQueue = null;
+    this.emergencyQueue = null;
+    this.respawnQueue = null;
     
     // Queue completion handlers
     this.queueCompletionHandlers = new Map();
@@ -149,7 +151,7 @@ class QueueManager {
     };
     
     // Create emergency queue
-    const emergencyQueue = new EmergencyQueue(
+    this.emergencyQueue = new EmergencyQueue(
       this.bot,
       this.botStateManager,
       this.ollamaInterface,
@@ -158,13 +160,13 @@ class QueueManager {
       this.learningManager,
       emergencyContext
     );
-    
+
     // Set completion handler
-    emergencyQueue.onComplete = () => this.handleQueueComplete('emergency');
-    
+    this.emergencyQueue.onComplete = () => this.handleQueueComplete('emergency');
+
     // Set as active and start
-    this.activeQueue = emergencyQueue;
-    await emergencyQueue.start();
+    this.activeQueue = this.emergencyQueue;
+    await this.emergencyQueue.start();
   }
   
   /**
@@ -182,7 +184,7 @@ class QueueManager {
     };
     
     // Create respawn queue
-    const respawnQueue = new RespawnQueue(
+    this.respawnQueue = new RespawnQueue(
       this.bot,
       this.botStateManager,
       this.ollamaInterface,
@@ -193,11 +195,11 @@ class QueueManager {
     );
     
     // Set completion handler
-    respawnQueue.onComplete = (success) => this.handleQueueComplete('respawn', success);
+    this.respawnQueue.onComplete = (success) => this.handleQueueComplete('respawn', success);
     
     // Set as active and start
-    this.activeQueue = respawnQueue;
-    await respawnQueue.start();
+    this.activeQueue = this.respawnQueue;
+    await this.respawnQueue.start();
   }
   
   /**
@@ -242,6 +244,8 @@ class QueueManager {
     // Clear state
     this.activeQueue = null;
     this.pausedQueue = null;
+    this.emergencyQueue = null;
+    this.respawnQueue = null;
     
     // Reset bot state
     this.botStateManager.resetGoals();
@@ -273,11 +277,16 @@ class QueueManager {
    */
   handleQueueComplete(queueType, success = true) {
     this.logger.info(`${queueType} queue completed (success: ${success})`);
-    
+
     // Destroy completed temporary queue
     if (this.activeQueue && queueType !== 'standard') {
       this.activeQueue.stop();
       this.activeQueue = null;
+      if (queueType === 'emergency') {
+        this.emergencyQueue = null;
+      } else if (queueType === 'respawn') {
+        this.respawnQueue = null;
+      }
     }
     
     // Check for paused queue to resume
@@ -379,7 +388,7 @@ class QueueManager {
    */
   async shutdown() {
     this.logger.info('Shutting down QueueManager');
-    
+
     // Stop all active queues
     if (this.activeQueue) {
       this.activeQueue.stop();
@@ -387,6 +396,9 @@ class QueueManager {
     if (this.pausedQueue) {
       this.pausedQueue.stop();
     }
+
+    this.emergencyQueue = null;
+    this.respawnQueue = null;
     
     // Save final state
     await this.saveState();
@@ -395,22 +407,30 @@ class QueueManager {
   }
 
   getQueueStatistics() {
+    const emergencyStats = this.emergencyQueue
+      ? {
+          size: this.emergencyQueue.currentActionQueue.length,
+          avgProcessingTime: this.emergencyQueue.getAverageProcessingTime(),
+          successRate: this.emergencyQueue.getSuccessRate()
+        }
+      : { size: 0, avgProcessingTime: 0, successRate: 0 };
+
+    const respawnStats = this.respawnQueue
+      ? {
+          size: this.respawnQueue.currentActionQueue.length,
+          avgProcessingTime: this.respawnQueue.getAverageProcessingTime(),
+          successRate: this.respawnQueue.getSuccessRate()
+        }
+      : { size: 0, avgProcessingTime: 0, successRate: 0 };
+
     return {
       standardQueue: {
         size: this.standardQueue.currentActionQueue.length,
         avgProcessingTime: this.standardQueue.getAverageProcessingTime(),
         successRate: this.standardQueue.getSuccessRate()
       },
-      emergencyQueue: {
-        size: this.emergencyQueue.currentActionQueue.length,
-        avgProcessingTime: this.emergencyQueue.getAverageProcessingTime(),
-        successRate: this.emergencyQueue.getSuccessRate()
-      },
-      respawnQueue: {
-        size: this.respawnQueue.currentActionQueue.length,
-        avgProcessingTime: this.respawnQueue.getAverageProcessingTime(),
-        successRate: this.respawnQueue.getSuccessRate()
-      }
+      emergencyQueue: emergencyStats,
+      respawnQueue: respawnStats
     };
   }
 }
