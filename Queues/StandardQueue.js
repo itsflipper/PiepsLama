@@ -6,6 +6,7 @@
 
 import { createMachine, interpret, State } from 'mineflayer-statemachine';
 import winston from 'winston';
+import ErrorRecovery from '../Utils/ErrorRecovery.js';
 
 class StandardQueue {
   constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager) {
@@ -48,6 +49,9 @@ class StandardQueue {
         })
       ]
     });
+
+    // Initialize error recovery helper
+    this.errorRecovery = new ErrorRecovery(this.bot, this.learningManager, this.logger);
   }
   
   /**
@@ -171,7 +175,7 @@ class StandardQueue {
       }
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Failed to get plan from LLM: ${error.message}`);
       
       // Gebot 4: Learn from planning failure
@@ -385,7 +389,7 @@ class StandardQueue {
       this.stateMachineService.send('SUCCESS');
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Action failed: ${error.message}`);
       
       this.actionResults.push({
@@ -507,7 +511,7 @@ class StandardQueue {
       this.logger.info(`Generated ${parsedLearnings.learnings.length} success learnings`);
       
     } catch (error) {
-      await handleError(err, { module: "StandardQueue", phase: "plan_execution" }, this.learningManager, this.logger);
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
       this.logger.error(`Failed to generate success learnings: ${error.message}`);
     }
   }
