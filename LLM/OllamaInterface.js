@@ -243,7 +243,7 @@ class OllamaInterface {
   async sendPrompt(promptName, contextData) {
     try {
       // Load template
-      const template = this.loadPromptTemplate(promptName);
+      const template = await this.loadPromptTemplate(promptName);
       
       // Fill template with context
       const filledPrompt = this.fillTemplate(template, contextData);
@@ -257,7 +257,7 @@ class OllamaInterface {
       const responseText = await this.sendRequest(filledPrompt);
       
       // Parse response
-      const parsedResponse = this.parseResponse(responseText);
+      const parsedResponse = await this.parseResponse(responseText);
       
       // Log response in debug mode
       if (process.env.VERBOSE_LLM_LOGGING === 'true') {
