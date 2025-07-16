@@ -4,7 +4,8 @@
  * Implementiert die Dreifaltigkeit: Ziel → Handlung → Aktion
  */
 
-import { createMachine, interpret, State } from 'mineflayer-statemachine';
+import statemachine from 'mineflayer-statemachine';
+const { createMachine, interpret, State } = statemachine;
 import winston from 'winston';
 import ErrorRecovery from '../Utils/ErrorRecovery.js';
 

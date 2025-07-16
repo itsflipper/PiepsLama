@@ -4,7 +4,8 @@
  * Minimale Latenz, maximale Autorität, temporäre Kontrolle.
  */
 
-import { createMachine, interpret } from 'mineflayer-statemachine';
+import statemachine from 'mineflayer-statemachine';
+const { createMachine, interpret } = statemachine;
 import winston from 'winston';
 import ErrorRecovery from '../Utils/ErrorRecovery.js';
 
