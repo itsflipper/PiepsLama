@@ -18,12 +18,12 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
 
-// Module imports
+// Module imports - KORREKT: Funktionale Module als Objekte importieren
 import BotStateManager from './Queues/BotStateManager.js';
 import Events from './Bot/Events.js';
 import OllamaInterface from './LLM/OllamaInterface.js';
 import AiResponseParser from './LLM/AiResponseParser.js';
-import ActionValidator from './LLM/ActionValidator.js';
+import * as actionValidator from './LLM/ActionValidator.js';
 import StandardQueue from './Queues/StandardQueue.js';
 import EmergencyQueue from './Queues/EmergencyQueue.js';
 import RespawnQueue from './Queues/RespawnQueue.js';
@@ -33,7 +33,7 @@ import LearningManager from './Memory/LearningManager.js';
 import SkillLibrary from './Bot/SkillLibrary.js';
 import ErrorRecovery from './Utils/ErrorRecovery.js';
 import PerformanceMonitor from './Utils/PerformanceMonitor.js';
-import BotActions from './Bot/BotActions.js';
+import * as botActions from './Bot/BotActions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -152,29 +152,34 @@ async function initializeBot() {
         // Module instantiation with correct dependency injection
         
         // Phase 1: Core modules without dependencies
-        modules.botStateManager = new BotStateManager();
+        modules.botStateManager = new BotStateManager(logger);
         modules.learningManager = new LearningManager(logger);
-        modules.botActions = new BotActions(bot);
         
-        // Phase 2: Modules with simple dependencies
-        modules.actionValidator = new ActionValidator(bot, modules.botStateManager);
-        modules.events = new Events(bot, modules.botStateManager);
-        modules.errorRecovery = new ErrorRecovery(logger, modules.learningManager);
+        // Phase 2: Funktionale Module (NICHT instanziieren!)
+        modules.botActions = botActions;
+        modules.actionValidator = actionValidator;
         
         // Phase 3: LLM modules
         modules.ollamaInterface = new OllamaInterface(
-          process.env.OLLAMA_HOST || 'http://localhost:11434',
-          process.env.OLLAMA_MODEL || 'llama2',
-          parseInt(process.env.OLLAMA_TIMEOUT) || 30000
+          {
+            host: process.env.OLLAMA_HOST || 'http://localhost:11434',
+            model: process.env.OLLAMA_MODEL || 'llama2',
+            timeout: parseInt(process.env.OLLAMA_TIMEOUT) || 30000
+          },
+          logger
         );
         modules.aiResponseParser = new AiResponseParser(modules.actionValidator, logger);
         
-        // Phase 4: Queue modules (they need many dependencies)
+        // Phase 4: Error Recovery
+        modules.errorRecovery = new ErrorRecovery(logger, modules.learningManager);
+        
+        // Phase 5: Queue modules (korrigierte Reihenfolge der Parameter)
         modules.standardQueue = new StandardQueue(
           bot,
           modules.botStateManager,
           modules.ollamaInterface,
           modules.aiResponseParser,
+          modules.botActions,
           modules.learningManager,
           logger
         );
@@ -184,6 +189,7 @@ async function initializeBot() {
           modules.botStateManager,
           modules.ollamaInterface,
           modules.aiResponseParser,
+          modules.botActions,
           modules.learningManager,
           logger,
           { type: 'emergency' } // context parameter
@@ -194,53 +200,68 @@ async function initializeBot() {
           modules.botStateManager,
           modules.ollamaInterface,
           modules.aiResponseParser,
+          modules.botActions,
           modules.learningManager,
           logger,
           { type: 'respawn' } // context parameter
         );
         
-        // Phase 5: Queue Manager (needs all queues)
+        // Phase 6: Queue Manager (korrigierte Parameter)
         modules.queueManager = new QueueManager(
           bot,
           modules.botStateManager,
           modules.ollamaInterface,
           modules.aiResponseParser,
+          modules.botActions,
           modules.learningManager,
           logger
         );
         
         // Set the queues in QueueManager after instantiation
-        modules.queueManager.setQueues(
-          modules.standardQueue,
-          modules.emergencyQueue,
-          modules.respawnQueue
-        );
+        if (modules.queueManager.setQueues) {
+          modules.queueManager.setQueues(
+            modules.standardQueue,
+            modules.emergencyQueue,
+            modules.respawnQueue
+          );
+        }
         
-        // Phase 6: Event Dispatcher
+        // Phase 7: Event Dispatcher
         modules.eventDispatcher = new EventDispatcher(
           modules.queueManager,
           logger
         );
         
-        // Phase 7: Advanced modules
+        // Phase 8: Events (korrigierte Parameter)
+        modules.events = new Events(
+          bot,
+          modules.eventDispatcher,
+          modules.botStateManager
+        );
+        
+        // Phase 9: Advanced modules
         modules.skillLibrary = new SkillLibrary(
           modules.botActions,
           modules.learningManager,
           logger
         );
         
-        // Phase 8: Performance Monitor (needs all modules)
+        // Phase 10: Performance Monitor (needs all modules)
         modules.performanceMonitor = new PerformanceMonitor(modules, logger);
         
         logger.info('All modules initialized successfully');
         
         // Start the event dispatcher
-        modules.eventDispatcher.startListening();
-        logger.info('System ready - EventDispatcher active');
+        if (modules.eventDispatcher.startListening) {
+          modules.eventDispatcher.startListening();
+          logger.info('System ready - EventDispatcher active');
+        }
         
         // Start performance monitoring
-        modules.performanceMonitor.start();
-        logger.info('Performance monitoring started');
+        if (modules.performanceMonitor.start) {
+          modules.performanceMonitor.start();
+          logger.info('Performance monitoring started');
+        }
         
         // Send ready message
         bot.chat('PiepsLama online and ready!');
@@ -266,7 +287,7 @@ async function initializeBot() {
 
     bot.on('end', (reason) => {
       logger.info('Bot disconnected:', reason);
-      if (modules.eventDispatcher) {
+      if (modules.eventDispatcher && modules.eventDispatcher.stopListening) {
         modules.eventDispatcher.stopListening();
       }
       handleReconnect();
@@ -323,7 +344,7 @@ async function gracefulShutdown(reason = 'Unknown') {
   
   try {
     // Stop performance monitoring first
-    if (modules.performanceMonitor) {
+    if (modules.performanceMonitor && modules.performanceMonitor.stop) {
       modules.performanceMonitor.stop();
       logger.info('Performance monitoring stopped');
     }
@@ -340,13 +361,13 @@ async function gracefulShutdown(reason = 'Unknown') {
       logger.info('Queue state saved');
     }
     
-    if (modules.learningManager) {
+    if (modules.learningManager && modules.learningManager.saveAll) {
       await modules.learningManager.saveAll();
       logger.info('Learnings saved');
     }
     
     // Stop all modules
-    if (modules.eventDispatcher) {
+    if (modules.eventDispatcher && modules.eventDispatcher.stopListening) {
       modules.eventDispatcher.stopListening();
     }
     
