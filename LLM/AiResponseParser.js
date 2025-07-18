@@ -20,6 +20,8 @@ class AiResponseParser {
   constructor(actionValidator) {
     // Gebot 5: Alleiniger Nutzer des ActionValidator
     this.actionValidator = actionValidator;
+    this.bot = bot; 
+    this.botStateManager = botStateManager; 
     
     // Setup logger
     this.logger = winston.createLogger({
@@ -136,12 +138,9 @@ class AiResponseParser {
       
       // Validate through ActionValidator
       const validationResult = this.actionValidator.validate(
-        {
-          actionName: action.actionName,
-          parameters: action.parameters
-        },
-        bot,
-        botStateManager
+        actions,
+        this.bot,
+        this.botStateManager
       );
       
       if (!validationResult.isValid) {
