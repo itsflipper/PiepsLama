@@ -169,7 +169,7 @@ async function initializeBot() {
           process.env.OLLAMA_MODEL || 'llama2',
           parseInt(process.env.OLLAMA_TIMEOUT) || 30000
         );
-        modules.aiResponseParser = new AiResponseParser(modules.actionValidator);
+        modules.aiResponseParser = new AiResponseParser(modules.actionValidator, bot, modules.botStateManager, logger);
         
         // Phase 4: Error Recovery
         modules.errorRecovery = new ErrorRecovery(bot, modules.learningManager, logger);
