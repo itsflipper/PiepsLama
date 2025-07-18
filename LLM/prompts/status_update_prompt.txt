@@ -33,46 +33,32 @@ Successful patterns: {{successPatterns}}
 
 <example>
 {
-  "analysis": "I have 15 health and 8 food. Night is approaching and I don't have shelter. I need to quickly gather wood and build a basic shelter before hostile mobs spawn.",
+  "analysis": "I have no tools and it is daytime. My top priority is to gather wood to craft basic tools.",
   "priority": "high",
   "goalQueue": [
     {
-      "goalId": "survival_shelter",
-      "goalDescription": "Build basic shelter before nightfall",
+      "goalId": "get_wood_for_tools",
+      "goalDescription": "Gather wood to craft a wooden pickaxe",
       "priority": 9,
-      "category": "survival"
-    },
-    {
-      "goalId": "gather_food",
-      "goalDescription": "Find food sources to maintain hunger above 10",
-      "priority": 7,
-      "category": "survival"
+      "category": "crafting"
     }
   ],
   "actionQueue": [
     {
       "actionName": "findBlock",
       "parameters": {
-        "blockName": "oak_log",
-        "maxDistance": 32
+        "blockName": "oak_log"
       },
-      "successCriteria": "Found oak_log within range",
-      "timeoutMs": 5000,
+      "successCriteria": "Found an oak tree.",
+      "timeoutMs": 10000,
       "fallbackAction": "explore"
     }
   ],
-  "learningInsights": [
-    {
-      "category": "survival",
-      "insight": "Prioritize shelter construction when night approaches",
-      "confidence": 0.9
-    }
-  ]
+  "learningInsights": []
 }
 </example>
 
 [IMPORTANT_RULES]
-- Each action in `actionQueue` MUST have valid parameters according to the "Available actions" list.
-- If you decide no action is necessary right now, `actionQueue` MUST be `[]`.
-- **YOU MUST ONLY RESPOND WITH THE JSON OBJECT.**
-- **CRITICAL RULE:** The "actionName" you provide MUST be an EXACT match from the "Available actions" list. ANY other value will cause a system failure. Do NOT invent new actions like "Find food" or "build shelter". Break down complex goals into a sequence of available, primitive actions.
+- **CRITICAL RULE 1: ACTION NAME VALIDITY.** The "actionName" you provide MUST be an EXACT match from the "Available actions" list. ANY other value will cause a system failure. Do NOT invent actions.
+- **CRITICAL RULE 2: PARAMETER VALIDITY.** The "parameters" object for each action MUST ONLY contain keys that are listed for that action in the "Available actions" list. Do NOT invent or misspell parameter names like "categoory".
+- **CRITICAL RULE 3: JSON ONLY

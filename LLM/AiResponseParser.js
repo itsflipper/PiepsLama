@@ -23,22 +23,6 @@ class AiResponseParser {
     this.bot = bot; 
     this.botStateManager = botStateManager; 
     this.logger = logger;
-    
-    // Setup logger
-    this.logger = winston.createLogger({
-      level: 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.printf(({ timestamp, level, message }) => {
-          return `[${timestamp}] [AiResponseParser] ${level}: ${message}`;
-        })
-      ),
-      transports: [
-        new winston.transports.Console({
-          level: process.env.LOG_LEVEL || 'info'
-        })
-      ]
-    });
   }
   
   /**
@@ -139,7 +123,7 @@ class AiResponseParser {
       
       // Validate through ActionValidator
       const validationResult = this.actionValidator.validate(
-        actions,
+        action,
         this.bot,
         this.botStateManager
       );
