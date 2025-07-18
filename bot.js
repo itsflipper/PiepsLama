@@ -160,6 +160,7 @@ async function initializeBot() {
         
         // Phase 2: Funktionale Module (NICHT instanziieren!)
         modules.botActions = botActions;
+        bot.botActions = modules.botActions;
         modules.actionValidator = actionValidator;
         
         // Phase 3: LLM modules
