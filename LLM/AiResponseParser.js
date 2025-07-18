@@ -17,11 +17,12 @@ class LLMPlanValidationError extends Error {
 }
 
 class AiResponseParser {
-  constructor(actionValidator) {
+  constructor(actionValidator, bot, botStateManager, logger) {
     // Gebot 5: Alleiniger Nutzer des ActionValidator
     this.actionValidator = actionValidator;
     this.bot = bot; 
     this.botStateManager = botStateManager; 
+    this.logger = logger;
     
     // Setup logger
     this.logger = winston.createLogger({
