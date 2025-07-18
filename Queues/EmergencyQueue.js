@@ -4,13 +4,13 @@
  * Minimale Latenz, maximale Autorität, temporäre Kontrolle.
  */
 
-import statemachine from 'mineflayer-statemachine';
-const { createMachine, interpret } = statemachine;
+import mineflayerStatemachine from 'mineflayer-statemachine';
+const { createMachine, interpret } = mineflayerStatemachine;
 import winston from 'winston';
 import ErrorRecovery from '../Utils/ErrorRecovery.js';
 
 class EmergencyQueue {
-  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, emergencyContext) {
+  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, logger, emergencyContext) {
     this.bot = bot;
     this.botStateManager = botStateManager;
     this.ollamaInterface = ollamaInterface;
@@ -31,8 +31,11 @@ class EmergencyQueue {
     this.stateMachine = null;
     this.stateMachineService = null;
     
+    // Performance tracking
+    this.actionResults = [];
+    
     // Gebot 6: Lauter Alarm
-    this.logger = winston.createLogger({
+    this.logger = logger || winston.createLogger({
       level: 'warn',
       format: winston.format.combine(
         winston.format.timestamp(),
@@ -133,7 +136,7 @@ class EmergencyQueue {
         return distance < nearestDistance ? mob : nearest;
       });
       
-      // Gebot 7: Use pvp plugin if available
+// Gebot 7: Use pvp plugin if available
       if (this.bot.pvp && this.bot.health > 10) {
         this.currentActionQueue.push({
           actionName: 'attack',
@@ -257,7 +260,7 @@ class EmergencyQueue {
       this.currentActionQueue.push(...parsedResponse.validatedActions);
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "EmergencyQueue", phase: "plan_execution" });
       this.logger.error(`Failed to get emergency plan: ${error.message}`);
       // Continue with reflex actions only
     }
@@ -445,13 +448,28 @@ class EmergencyQueue {
       this.logger.warn(`Emergency action succeeded: ${action.actionName}`);
       this.botStateManager.setExecutingAction(false);
       
+      // Record result
+      this.actionResults.push({
+        action: action.actionName,
+        success: true,
+        duration: Date.now() - this.emergencyStartTime
+      });
+      
       this.currentActionIndex++;
       this.stateMachineService.send('SUCCESS');
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "EmergencyQueue", phase: "action_execution" });
       this.logger.error(`Emergency action failed: ${error.message}`);
       this.botStateManager.setExecutingAction(false);
+      
+      // Record failure
+      this.actionResults.push({
+        action: action.actionName,
+        success: false,
+        error: error.message,
+        duration: Date.now() - this.emergencyStartTime
+      });
       
       this.lastError = error;
       this.stateMachineService.send('FAILURE');
@@ -543,6 +561,26 @@ class EmergencyQueue {
   }
   
   /**
+   * Pause emergency queue (rarely used)
+   */
+  pause() {
+    this.logger.warn('Emergency queue paused (unusual)');
+    if (this.stateMachineService) {
+      this.stateMachineService.stop();
+    }
+  }
+  
+  /**
+   * Resume emergency queue
+   */
+  async resume() {
+    this.logger.warn('Emergency queue resumed');
+    if (this.currentActionIndex < this.currentActionQueue.length) {
+      await this.executeActionQueue();
+    }
+  }
+  
+  /**
    * Get emergency status
    */
   getStatus() {
@@ -554,6 +592,7 @@ class EmergencyQueue {
       duration: this.emergencyStartTime ? Date.now() - this.emergencyStartTime : 0
     };
   }
+  
   getAverageProcessingTime() {
     if (this.actionResults.length === 0) return 0;
     const totalTime = this.actionResults.reduce((sum, result) => sum + (result.duration || 0), 0);

@@ -8,11 +8,10 @@ import PQueue from 'p-queue';
 import winston from 'winston';
 
 class EventDispatcher {
-  constructor(bot, queueManager, botStateManager, events) {
+  constructor(bot, queueManager, botStateManager, logger) {
     this.bot = bot;
     this.queueManager = queueManager;
     this.botStateManager = botStateManager;
-    this.events = events;
     
     // Gebot 2: Priority-Queue mit p-queue
     // Gebot 3: Concurrency = 1
@@ -27,7 +26,7 @@ class EventDispatcher {
     this.statusUpdateInterval = null;
     
     // Setup logger
-    this.logger = winston.createLogger({
+    this.logger = logger || winston.createLogger({
       level: 'info',
       format: winston.format.combine(
         winston.format.timestamp(),
@@ -41,9 +40,6 @@ class EventDispatcher {
         })
       ]
     });
-    
-    // Set dispatcher reference in events
-    this.events.setEventDispatcher(this);
   }
   
   /**
@@ -58,13 +54,29 @@ class EventDispatcher {
     this.logger.info('EventDispatcher starting - Sequential processing enabled');
     this.isListening = true;
     
-    // Start event listeners
-    this.events.startListening();
-    
     // Start periodic status updates
     const updateInterval = parseInt(process.env.STATUS_UPDATE_INTERVAL) || 30000;
     this.statusUpdateInterval = setInterval(() => {
-      this.events.triggerStatusUpdate();
+      // Trigger status update through Events module
+      if (this.bot && this.bot.entity) {
+        this.dispatch({
+          eventId: 'status-' + Date.now(),
+          eventType: 'status_update',
+          priority: 3,
+          timestamp: new Date().toISOString(),
+          data: {
+            sourceEvent: 'periodic_update',
+            details: {},
+            affectedQueues: [],
+            requiresImmediateAction: false
+          },
+          response: {
+            actionRequired: 'none',
+            targetQueue: null,
+            newQueueState: null
+          }
+        });
+      }
     }, updateInterval);
     
     // Log queue status periodically
@@ -87,9 +99,6 @@ class EventDispatcher {
     
     this.logger.info('EventDispatcher stopping');
     this.isListening = false;
-    
-    // Stop event listeners
-    this.events.stopListening();
     
     // Clear status update interval
     if (this.statusUpdateInterval) {

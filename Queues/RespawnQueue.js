@@ -4,14 +4,14 @@
  * Entscheidet rational zwischen Item-Recovery, Base-Return oder Fresh-Start.
  */
 
-import statemachine from 'mineflayer-statemachine';
-const { createMachine, interpret } = statemachine;
+import mineflayerStatemachine from 'mineflayer-statemachine';
+const { createMachine, interpret } = mineflayerStatemachine;
 import winston from 'winston';
 import ErrorRecovery from '../Utils/ErrorRecovery.js';
 import { Vec3 } from 'vec3';
 
 class RespawnQueue {
-  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, deathContext) {
+  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, logger, deathContext) {
     this.bot = bot;
     this.botStateManager = botStateManager;
     this.ollamaInterface = ollamaInterface;
@@ -35,12 +35,15 @@ class RespawnQueue {
     this.stateMachine = null;
     this.stateMachineService = null;
     
+    // Performance tracking
+    this.actionResults = [];
+    
     // Known locations
     this.knownBase = null;
     this.lastSafeLocation = null;
     
     // Setup logger
-    this.logger = winston.createLogger({
+    this.logger = logger || winston.createLogger({
       level: 'info',
       format: winston.format.combine(
         winston.format.timestamp(),
@@ -121,7 +124,7 @@ class RespawnQueue {
         );
       }
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "RespawnQueue", phase: "location_loading" });
       this.logger.warn(`Failed to load known locations: ${error.message}`);
     }
   }
@@ -177,7 +180,7 @@ class RespawnQueue {
       this.setMissionFromStrategy(parsedResponse);
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "RespawnQueue", phase: "strategy_request" });
       this.logger.error(`Failed to get respawn strategy: ${error.message}`);
       
       // Default to fresh start on error
@@ -383,14 +386,29 @@ class RespawnQueue {
       this.botStateManager.setExecutingAction(false);
       this.botStateManager.incrementActionCount(true);
       
+      // Record result
+      this.actionResults.push({
+        action: action.actionName,
+        success: true,
+        duration: Date.now() - this.missionStartTime
+      });
+      
       this.currentActionIndex++;
       this.stateMachineService.send('SUCCESS');
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "RespawnQueue", phase: "action_execution" });
       this.logger.error(`Action failed: ${error.message}`);
       this.botStateManager.setExecutingAction(false);
       this.botStateManager.incrementActionCount(false);
+      
+      // Record failure
+      this.actionResults.push({
+        action: action.actionName,
+        success: false,
+        error: error.message,
+        duration: Date.now() - this.missionStartTime
+      });
       
       this.lastError = error;
       this.stateMachineService.send('FAILURE');
@@ -450,7 +468,7 @@ class RespawnQueue {
     this.complete(false);
   }
   
-  /**
+/**
    * Gebot 6: Complete mission and signal new beginning
    */
   complete(success) {
@@ -520,6 +538,26 @@ class RespawnQueue {
   }
   
   /**
+   * Pause respawn queue
+   */
+  pause() {
+    this.logger.info('Respawn queue paused');
+    if (this.stateMachineService) {
+      this.stateMachineService.stop();
+    }
+  }
+  
+  /**
+   * Resume respawn queue
+   */
+  async resume() {
+    this.logger.info('Respawn queue resumed');
+    if (this.currentActionIndex < this.currentActionQueue.length) {
+      await this.executeMission();
+    }
+  }
+  
+  /**
    * Get current inventory summary
    */
   getCurrentInventory() {
@@ -544,6 +582,7 @@ class RespawnQueue {
       strategy: this.missionStrategy
     };
   }
+  
   getAverageProcessingTime() {
     if (this.actionResults.length === 0) return 0;
     const totalTime = this.actionResults.reduce((sum, result) => sum + (result.duration || 0), 0);

@@ -4,13 +4,13 @@
  * Implementiert die Dreifaltigkeit: Ziel → Handlung → Aktion
  */
 
-import statemachine from 'mineflayer-statemachine';
-const { createMachine, interpret, State } = statemachine;
+import mineflayerStatemachine from 'mineflayer-statemachine';
+const { createMachine, interpret, State } = mineflayerStatemachine;
 import winston from 'winston';
 import ErrorRecovery from '../Utils/ErrorRecovery.js';
 
 class StandardQueue {
-  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager) {
+  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, logger) {
     this.bot = bot;
     this.botStateManager = botStateManager;
     this.ollamaInterface = ollamaInterface;
@@ -36,7 +36,7 @@ class StandardQueue {
     this.actionResults = [];
     
     // Setup logger
-    this.logger = winston.createLogger({
+    this.logger = logger || winston.createLogger({
       level: 'info',
       format: winston.format.combine(
         winston.format.timestamp(),
@@ -390,7 +390,7 @@ class StandardQueue {
       this.stateMachineService.send('SUCCESS');
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "action_execution" });
       this.logger.error(`Action failed: ${error.message}`);
       
       this.actionResults.push({
@@ -512,7 +512,7 @@ class StandardQueue {
       this.logger.info(`Generated ${parsedLearnings.learnings.length} success learnings`);
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "learning_generation" });
       this.logger.error(`Failed to generate success learnings: ${error.message}`);
     }
   }
@@ -618,6 +618,7 @@ class StandardQueue {
         this.actionResults.filter(r => r.success).length / this.actionResults.length : 0
     };
   }
+  
   getAverageProcessingTime() {
     if (this.actionResults.length === 0) return 0;
     const totalTime = this.actionResults.reduce((sum, result) => sum + (result.duration || 0), 0);

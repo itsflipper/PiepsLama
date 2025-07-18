@@ -9,9 +9,12 @@ import dotenv from 'dotenv';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import mineflayer from 'mineflayer';
-import { pathfinder } from 'mineflayer-pathfinder';
-import { plugin as collectBlock } from 'mineflayer-collectblock';
-import { plugin as pvp } from 'mineflayer-pvp';
+import pf from 'mineflayer-pathfinder';
+const { pathfinder, goals } = pf;
+import collectBlock from 'mineflayer-collectblock';
+const { plugin: collectBlockPlugin } = collectBlock;
+import pvp from 'mineflayer-pvp';
+const { plugin: pvpPlugin } = pvp;
 import armorManager from 'mineflayer-armor-manager';
 import autoEat from 'mineflayer-auto-eat';
 import { fileURLToPath } from 'url';
@@ -138,8 +141,8 @@ async function initializeBot() {
 
     // Load plugins in correct order
     bot.loadPlugin(pathfinder);
-    bot.loadPlugin(collectBlock);
-    bot.loadPlugin(pvp);
+    bot.loadPlugin(collectBlockPlugin);
+    bot.loadPlugin(pvpPlugin);
     bot.loadPlugin(armorManager);
     bot.loadPlugin(autoEat);
     logger.info('Plugins loaded successfully');
@@ -152,8 +155,8 @@ async function initializeBot() {
         // Module instantiation with correct dependency injection
         
         // Phase 1: Core modules without dependencies
-        modules.botStateManager = new BotStateManager(logger);
-        modules.learningManager = new LearningManager(logger);
+        modules.botStateManager = new BotStateManager();
+        modules.learningManager = new LearningManager();
         
         // Phase 2: Funktionale Module (NICHT instanziieren!)
         modules.botActions = botActions;
@@ -161,52 +164,16 @@ async function initializeBot() {
         
         // Phase 3: LLM modules
         modules.ollamaInterface = new OllamaInterface(
-          {
-            host: process.env.OLLAMA_HOST || 'http://localhost:11434',
-            model: process.env.OLLAMA_MODEL || 'llama2',
-            timeout: parseInt(process.env.OLLAMA_TIMEOUT) || 30000
-          },
-          logger
+          process.env.OLLAMA_HOST || 'http://localhost:11434',
+          process.env.OLLAMA_MODEL || 'llama2',
+          parseInt(process.env.OLLAMA_TIMEOUT) || 30000
         );
-        modules.aiResponseParser = new AiResponseParser(modules.actionValidator, logger);
+        modules.aiResponseParser = new AiResponseParser(modules.actionValidator);
         
         // Phase 4: Error Recovery
-        modules.errorRecovery = new ErrorRecovery(logger, modules.learningManager);
+        modules.errorRecovery = new ErrorRecovery(bot, modules.learningManager, logger);
         
-        // Phase 5: Queue modules (korrigierte Reihenfolge der Parameter)
-        modules.standardQueue = new StandardQueue(
-          bot,
-          modules.botStateManager,
-          modules.ollamaInterface,
-          modules.aiResponseParser,
-          modules.botActions,
-          modules.learningManager,
-          logger
-        );
-        
-        modules.emergencyQueue = new EmergencyQueue(
-          bot,
-          modules.botStateManager,
-          modules.ollamaInterface,
-          modules.aiResponseParser,
-          modules.botActions,
-          modules.learningManager,
-          logger,
-          { type: 'emergency' } // context parameter
-        );
-        
-        modules.respawnQueue = new RespawnQueue(
-          bot,
-          modules.botStateManager,
-          modules.ollamaInterface,
-          modules.aiResponseParser,
-          modules.botActions,
-          modules.learningManager,
-          logger,
-          { type: 'respawn' } // context parameter
-        );
-        
-        // Phase 6: Queue Manager (korrigierte Parameter)
+        // Phase 5: Queue Manager (creates queues internally)
         modules.queueManager = new QueueManager(
           bot,
           modules.botStateManager,
@@ -217,36 +184,33 @@ async function initializeBot() {
           logger
         );
         
-        // Set the queues in QueueManager after instantiation
-        if (modules.queueManager.setQueues) {
-          modules.queueManager.setQueues(
-            modules.standardQueue,
-            modules.emergencyQueue,
-            modules.respawnQueue
-          );
-        }
+        // Initialize queue manager (this creates the queues)
+        modules.queueManager.initialize();
         
-        // Phase 7: Event Dispatcher
+        // Phase 6: Event Dispatcher
         modules.eventDispatcher = new EventDispatcher(
+          bot,
           modules.queueManager,
+          modules.botStateManager,
           logger
         );
         
-        // Phase 8: Events (korrigierte Parameter)
+        // Phase 7: Events
         modules.events = new Events(
           bot,
-          modules.eventDispatcher,
           modules.botStateManager
         );
         
-        // Phase 9: Advanced modules
+        // Set the event dispatcher reference
+        modules.events.setEventDispatcher(modules.eventDispatcher);
+        
+        // Phase 8: Advanced modules
         modules.skillLibrary = new SkillLibrary(
-          modules.botActions,
-          modules.learningManager,
-          logger
+          bot,
+          modules.learningManager
         );
         
-        // Phase 10: Performance Monitor (needs all modules)
+        // Phase 9: Performance Monitor (needs all modules)
         modules.performanceMonitor = new PerformanceMonitor(modules, logger);
         
         logger.info('All modules initialized successfully');

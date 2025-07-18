@@ -10,7 +10,7 @@ import EmergencyQueue from './EmergencyQueue.js';
 import RespawnQueue from './RespawnQueue.js';
 
 class QueueManager {
-  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager) {
+  constructor(bot, botStateManager, ollamaInterface, aiResponseParser, botActions, learningManager, logger) {
     // Gebot 7: Zentraler Knotenpunkt der Abhängigkeiten
     this.bot = bot;
     this.botStateManager = botStateManager;
@@ -32,7 +32,7 @@ class QueueManager {
     this.queueCompletionHandlers = new Map();
     
     // Setup logger
-    this.logger = winston.createLogger({
+    this.logger = logger || winston.createLogger({
       level: 'info',
       format: winston.format.combine(
         winston.format.timestamp(),
@@ -61,10 +61,11 @@ class QueueManager {
       this.ollamaInterface,
       this.aiResponseParser,
       this.botActions,
-      this.learningManager
+      this.learningManager,
+      this.logger
     );
     
-    this.logger.info('Queue system initialized');
+    this.logger.info('Queue system initialized with StandardQueue');
   }
   
   /**
@@ -158,6 +159,7 @@ class QueueManager {
       this.aiResponseParser,
       this.botActions,
       this.learningManager,
+      this.logger,
       emergencyContext
     );
 
@@ -191,6 +193,7 @@ class QueueManager {
       this.aiResponseParser,
       this.botActions,
       this.learningManager,
+      this.logger,
       deathContext
     );
     
@@ -425,9 +428,9 @@ class QueueManager {
 
     return {
       standardQueue: {
-        size: this.standardQueue.currentActionQueue.length,
-        avgProcessingTime: this.standardQueue.getAverageProcessingTime(),
-        successRate: this.standardQueue.getSuccessRate()
+        size: this.standardQueue ? this.standardQueue.currentActionQueue.length : 0,
+        avgProcessingTime: this.standardQueue ? this.standardQueue.getAverageProcessingTime() : 0,
+        successRate: this.standardQueue ? this.standardQueue.getSuccessRate() : 0
       },
       emergencyQueue: emergencyStats,
       respawnQueue: respawnStats

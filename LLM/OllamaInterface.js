@@ -109,8 +109,7 @@ class OllamaInterface {
       
       return template;
     } catch (error) {
-
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "OllamaInterface", phase: "template_loading" });
       
       throw new PromptTemplateError(
         `Failed to load prompt template: ${promptName}`,
@@ -145,6 +144,32 @@ class OllamaInterface {
   }
   
   /**
+   * Private method to make the actual request
+   */
+  async _makeRequest(prompt) {
+    const response = await this.axios.post('/api/generate', {
+      model: this.model,
+      prompt: prompt,
+      stream: false,
+      format: 'json',
+      options: {
+        temperature: 0.7,
+        top_p: 0.9,
+        seed: Date.now() // For reproducibility in testing
+      }
+    });
+    
+    if (response.data && response.data.response) {
+      return response.data.response;
+    } else {
+      throw new LLMResponseError(
+        'Invalid response structure from Ollama',
+        response.data
+      );
+    }
+  }
+  
+  /**
    * Gebot 2: Send request with retry logic
    */
   async sendRequest(prompt) {
@@ -154,30 +179,13 @@ class OllamaInterface {
       try {
         this.logger.debug(`Sending request to Ollama (attempt ${attempt}/${this.maxRetries})`);
         
-        const response = await this.axios.post('/api/generate', {
-          model: this.model,
-          prompt: prompt,
-          stream: false,
-          format: 'json',
-          options: {
-            temperature: 0.7,
-            top_p: 0.9,
-            seed: Date.now() // For reproducibility in testing
-          }
-        });
+        const response = await this._makeRequest(prompt);
         
-        if (response.data && response.data.response) {
-          this.logger.debug('Received successful response from Ollama');
-          return response.data.response;
-        } else {
-          throw new LLMResponseError(
-            'Invalid response structure from Ollama',
-            response.data
-          );
-        }
+        this.logger.debug('Received successful response from Ollama');
+        return response;
         
       } catch (error) {
-        await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+        await this.errorRecovery.handleError(error, { module: "OllamaInterface", phase: "request_send" });
 
         lastError = error;
         
@@ -203,19 +211,9 @@ class OllamaInterface {
         }
       }
     }
-    const startTime = Date.now();
-    this.metrics.totalRequests++;
-    this.metrics.lastRequestTime = startTime;
-
-    try {
-      const response = await this._makeRequest(prompt);
-      this.metrics.totalResponseTime += (Date.now() - startTime);
-      return response;
-    } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
-      this.metrics.errors++;
-      throw error;
-    }
+    
+    // Update metrics
+    this.metrics.errors++;
 
     // All retries exhausted
     this.logger.error('All retry attempts failed');
@@ -231,7 +229,7 @@ class OllamaInterface {
       this.logger.debug('Successfully parsed JSON response');
       return parsed;
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "OllamaInterface", phase: "response_parsing" });
       this.logger.error(`Failed to parse JSON response: ${error.message}`);
       this.logger.debug(`Raw response: ${responseText.substring(0, 200)}...`);
       throw new LLMResponseError(
@@ -245,6 +243,10 @@ class OllamaInterface {
    * Generic method to send any prompt
    */
   async sendPrompt(promptName, contextData) {
+    const startTime = Date.now();
+    this.metrics.totalRequests++;
+    this.metrics.lastRequestTime = startTime;
+    
     try {
       // Load template
       const template = await this.loadPromptTemplate(promptName);
@@ -268,10 +270,13 @@ class OllamaInterface {
         this.logger.debug(`Parsed response:\n${JSON.stringify(parsedResponse, null, 2).substring(0, 500)}...`);
       }
       
+      // Update metrics
+      this.metrics.totalResponseTime += (Date.now() - startTime);
+      
       return parsedResponse;
       
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "OllamaInterface", phase: "prompt_send" });
       // Re-throw with context
       if (error instanceof OllamaConnectionError || 
           error instanceof LLMResponseError || 
@@ -348,7 +353,7 @@ class OllamaInterface {
     return this.sendPrompt('chat_tip_parser', contextData);
   }
   
-  /**
+/**
    * Test connection to Ollama
    */
   async testConnection() {
@@ -367,7 +372,7 @@ class OllamaInterface {
         availableModels: models.map(m => m.name)
       };
     } catch (error) {
-      await this.errorRecovery.handleError(error, { module: "StandardQueue", phase: "plan_execution" });
+      await this.errorRecovery.handleError(error, { module: "OllamaInterface", phase: "connection_test" });
       return {
         connected: false,
         error: error.message
@@ -407,7 +412,8 @@ class OllamaInterface {
   }
 
   estimateContextUsage() {
-    return 0.3; // Platzhalter – später verbessern
+    // Placeholder implementation - should be improved later
+    return 0.3;
   }
 }
 

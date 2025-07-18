@@ -5,7 +5,8 @@
  */
 
 import { Vec3 } from 'vec3';
-import { goals } from 'mineflayer-pathfinder';
+import pf from 'mineflayer-pathfinder';
+const { goals } = pf;
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);

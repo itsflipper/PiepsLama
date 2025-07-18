@@ -268,13 +268,12 @@ class PerformanceMonitor {
     
     try {
       const botState = this.modules.botStateManager.getState();
-      const actionStats = this.modules.botStateManager.getActionStatistics();
+      const performanceMetrics = this.modules.botStateManager.getPerformanceMetrics();
       const networkMetrics = this.modules.botStateManager.getNetworkMetrics();
       
       // Calculate actions per minute
-      const recentActions = actionStats.successCount + actionStats.failureCount;
       const uptimeMinutes = (Date.now() - this.baseline.startTime) / 60000;
-      const actionsPerMinute = uptimeMinutes > 0 ? recentActions / uptimeMinutes : 0;
+      const actionsPerMinute = uptimeMinutes > 0 ? performanceMetrics.actionsExecuted / uptimeMinutes : 0;
       
       // Get bot game state if available
       const bot = this.modules.bot;
@@ -306,7 +305,7 @@ class PerformanceMonitor {
   /**
    * Collect memory/learning metrics
    */
-  _collectMemoryMetrics() {
+  async _collectMemoryMetrics() {
     if (!this.modules.learningManager) {
       return {
         totalLearnings: 0,
@@ -316,7 +315,7 @@ class PerformanceMonitor {
     }
     
     try {
-      const stats = this.modules.learningManager.getStatistics();
+      const stats = await this.modules.learningManager.getStatistics();
       return {
         totalLearnings: stats.totalLearnings,
         learningsByType: stats.byType,
@@ -436,7 +435,7 @@ class PerformanceMonitor {
       }
     });
     
-    // LLM performance alerts
+// LLM performance alerts
     if (metrics.llm.avgResponseTime > this.alertThresholds.llmResponseTimeMs) {
       alerts.push({
         level: 'warning',

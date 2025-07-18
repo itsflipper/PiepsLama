@@ -120,7 +120,7 @@ class SkillLibrary {
       this.skills.set(skill.skillId, skill);
       await this.saveSkills();
       
-      // Add learning about new skill
+// Add learning about new skill
       await this.learningManager.addLearning('standard', {
         category: skill.category,
         learningType: 'actionLearning',
@@ -649,6 +649,29 @@ class SkillLibrary {
     stats.mostUsedSkills = _.orderBy(skillUsage, ['uses'], ['desc']).slice(0, 5);
     
     return stats;
+  }
+  
+  /**
+   * Get skill count - needed by PerformanceMonitor
+   */
+  getSkillCount() {
+    return this.skills.size;
+  }
+  
+  /**
+   * Get skills by category - needed by PerformanceMonitor
+   */
+  getSkillsByCategory() {
+    const byCategory = {};
+    
+    for (const skill of this.skills.values()) {
+      if (!byCategory[skill.category]) {
+        byCategory[skill.category] = 0;
+      }
+      byCategory[skill.category]++;
+    }
+    
+    return byCategory;
   }
 }
 
