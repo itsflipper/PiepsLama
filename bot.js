@@ -9,14 +9,13 @@ import dotenv from 'dotenv';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import mineflayer from 'mineflayer';
-import pf from 'mineflayer-pathfinder';
-const { pathfinder, goals } = pf;
-import collectBlock from 'mineflayer-collectblock';
-const { plugin: collectBlockPlugin } = collectBlock;
-import pvp from 'mineflayer-pvp';
-const { plugin: pvpPlugin } = pvp;
-import armorManager from 'mineflayer-armor-manager';
-import autoEat from 'mineflayer-auto-eat';
+
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+import mineflayerStatemachine from 'mineflayer-statemachine';
+const { BotStateMachine, NestedStateMachine, BehaviorIdle } = mineflayerStatemachine;
+
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
@@ -27,9 +26,6 @@ import Events from './Bot/Events.js';
 import OllamaInterface from './LLM/OllamaInterface.js';
 import AiResponseParser from './LLM/AiResponseParser.js';
 import * as actionValidator from './LLM/ActionValidator.js';
-import StandardQueue from './Queues/StandardQueue.js';
-import EmergencyQueue from './Queues/EmergencyQueue.js';
-import RespawnQueue from './Queues/RespawnQueue.js';
 import QueueManager from './Queues/QueueManager.js';
 import EventDispatcher from './Bot/EventDispatcher.js';
 import LearningManager from './Memory/LearningManager.js';
@@ -139,12 +135,18 @@ async function initializeBot() {
     bot = mineflayer.createBot(botOptions);
     logger.info(`Bot created for ${botOptions.host}:${botOptions.port}`);
 
+    const initialState = new NestedStateMachine([], new BehaviorIdle());
+    bot.stateMachine = new BotStateMachine(bot, initialState);
+
     // Load plugins in correct order
-    bot.loadPlugin(pathfinder);
-    bot.loadPlugin(collectBlockPlugin);
-    bot.loadPlugin(pvpPlugin);
-    bot.loadPlugin(armorManager);
-    bot.loadPlugin(autoEat);
+    bot.loadPlugin(require('mineflayer-pathfinder').pathfinder);
+    bot.loadPlugin(require('mineflayer-collectblock').plugin);
+    bot.loadPlugin(require('mineflayer-pvp').plugin);
+    bot.loadPlugin(require('mineflayer-armor-manager'));
+    bot.loadPlugin(require('mineflayer-auto-eat'));
+
+    // WIR LADEN STATEMACHINE HIER NICHT MEHR ALS PLUGIN!
+    
     logger.info('Plugins loaded successfully');
 
     // Wait for spawn event before initializing modules
@@ -152,6 +154,9 @@ async function initializeBot() {
       logger.info('Bot spawned in world');
       
       try {
+        // ERSTELLE UND AKTIVIERE DIE STATE MACHINE HIER!
+        const initialState = new NestedStateMachine([], new BehaviorIdle());
+        bot.stateMachine = new BotStateMachine(bot, initialState);
         // Module instantiation with correct dependency injection
         
         // Phase 1: Core modules without dependencies

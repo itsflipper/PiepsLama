@@ -28,48 +28,35 @@ class AiResponseParser {
   /**
    * Gebot 7: Main synchronous parsing and validation method
    */
-  parseAndValidate(llmResponse, bot, botStateManager) {
-    this.logger.debug('Starting LLM response parsing and validation');
-    
-    // Gebot 6: Sanity check on response structure
-    const structureCheck = this.performSanityCheck(llmResponse);
-    if (!structureCheck.valid) {
-      throw new Error(`Invalid LLM response structure: ${structureCheck.error}`);
+  parseAndValidate(llmResponse) {
+    this.logger.debug('Starting intelligent LLM response parsing and validation');
+
+    let actionArray = [];
+
+    // Der intelligente Adapter:
+    if (Array.isArray(llmResponse)) {
+        // Fall 1: Die LLM hat uns, wie gewünscht, ein Array geschickt.
+        actionArray = llmResponse;
+    } else if (llmResponse && typeof llmResponse === 'object' && llmResponse.actionName) {
+        // Fall 2: Die LLM war schlau, hat aber nur ein einzelnes Action-Objekt geschickt.
+        this.logger.warn('LLM returned a single action object. Wrapping it in an array.');
+        actionArray = [llmResponse]; // Wir packen es selbst in ein Array!
+    } else {
+        // Fall 3: Die Antwort ist wirklich Müll.
+        this.logger.error(`Invalid LLM response structure: Expected an array or a single action object. Got: ${JSON.stringify(llmResponse).substring(0, 100)}...`);
+        throw new Error('Invalid LLM response structure: Could not find a valid action array.');
     }
     
-    // Extract components
-    const { actionQueue, goalQueue, learningInsights } = llmResponse;
+    // Validiere die Aktionen aus dem (jetzt definitiv existierenden) Array
+    const validatedActions = this.validateActionQueue(actionArray);
     
-    // Validate all actions - Gebot 1: All or nothing
-    const validatedActions = this.validateActionQueue(actionQueue, bot, botStateManager);
-    
-    // Process goals
-    const processedGoals = this.processGoalQueue(goalQueue);
-    
-    // Process learnings
-    const processedLearnings = this.processLearningInsights(learningInsights);
-    
-    // Extract analysis and priority
-    const analysis = llmResponse.analysis || 'No analysis provided';
-    const priority = this.validatePriority(llmResponse.priority);
-    
-    // Gebot 3: Return clean, structured output
     const result = {
-      validatedActions: validatedActions,
-      goals: processedGoals,
-      learnings: processedLearnings,
-      analysis: analysis,
-      priority: priority,
-      metadata: {
-        timestamp: new Date().toISOString(),
-        actionCount: validatedActions.length,
-        goalCount: processedGoals.length,
-        learningCount: processedLearnings.length
-      }
+        validatedActions: validatedActions,
+        goals: [],
+        learnings: []
     };
     
-    this.logger.info(`Successfully parsed LLM response: ${validatedActions.length} actions, ${processedGoals.length} goals, ${processedLearnings.length} learnings`);
-    
+    this.logger.info(`Successfully parsed LLM plan: ${validatedActions.length} actions received.`);
     return result;
   }
   

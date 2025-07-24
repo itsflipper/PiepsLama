@@ -65,7 +65,7 @@ export function validate(action, bot, botStateManager) {
   }
 
   // Gebot 5: Check bot state
-  const stateCheck = checkBotState(action.actionName, botStateManager, actionDefinition.category);
+  const stateCheck = checkBotState(action.actionName, bot, botStateManager, actionDefinition.category);
   if (!stateCheck.isValid) {
     return invalidResponse(stateCheck.reason);
   }
@@ -333,7 +333,7 @@ function checkResources(actionName, params, bot) {
 /**
  * Check bot state compatibility
  */
-function checkBotState(actionName, botStateManager, actionCategory) {
+function checkBotState(actionName, bot, botStateManager, actionCategory) {
   const currentState = botStateManager.getState();
   const currentQueue = botStateManager.getCurrentQueue();
 
